@@ -65,42 +65,52 @@ export default function CRMPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage
+  // Initialize database and load data
   useEffect(() => {
-    const savedCustomers = localStorage.getItem('crediflow_customers');
-    if (savedCustomers) {
+    const initDb = async () => {
       try {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setCustomers(JSON.parse(savedCustomers));
-      } catch (e) {
-        console.error("Failed to parse customers", e);
-      }
-    }
+        // Run setup once
+        await fetch('/api/db/setup');
+        
+        // Load data
+        const [customersRes, brokersRes] = await Promise.all([
+          fetch('/api/customers'),
+          fetch('/api/brokers')
+        ]);
 
-    const savedBrokers = localStorage.getItem('crediflow_brokers');
-    if (savedBrokers) {
-      try {
-        setBrokers(JSON.parse(savedBrokers));
-      } catch (e) {
-        console.error("Failed to parse brokers", e);
+        if (customersRes.ok) {
+          const customersData = await customersRes.json();
+          setCustomers(customersData);
+        }
+
+        if (brokersRes.ok) {
+          const brokersData = await brokersRes.json();
+          setBrokers(brokersData);
+        }
+      } catch (error) {
+        console.error('Failed to load data from database:', error);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      // Initial brokers
-      setBrokers([
-        { id: '2', name: 'Corretor João', email: 'joao@imobiliaria.com', phone: '(11) 99999-1111', company: 'Imobiliária Central', status: 'active', createdAt: new Date().toISOString() },
-        { id: '3', name: 'Corretora Maria', email: 'maria@vendas.com', phone: '(11) 99999-2222', company: 'Maria Imóveis', status: 'active', createdAt: new Date().toISOString() }
-      ]);
-    }
+    };
+
+    initDb();
   }, []);
 
-  // Save data to localStorage
-  useEffect(() => {
-    localStorage.setItem('crediflow_customers', JSON.stringify(customers));
-  }, [customers]);
+  // Update USERS list with brokers from database
+  const allUsers = useMemo(() => {
+    const dynamicBrokers = brokers.map(b => ({
+      id: b.id,
+      name: b.name,
+      role: 'broker' as UserRole,
+      password: b.password || '123'
+    }));
 
-  useEffect(() => {
-    localStorage.setItem('crediflow_brokers', JSON.stringify(brokers));
+    // Filter out duplicates if any
+    const baseUsers = USERS.filter(u => u.role !== 'broker');
+    return [...baseUsers, ...dynamicBrokers];
   }, [brokers]);
 
   const filteredCustomers = useMemo(() => {
@@ -118,7 +128,7 @@ export default function CRMPage() {
     );
   }, [customers, searchTerm, currentUser]);
 
-  const handleAddCustomer = (data: Partial<Customer>) => {
+  const handleAddCustomer = async (data: Partial<Customer>) => {
     const newCustomer: Customer = {
       id: Math.random().toString(36).substr(2, 9),
       name: data.name!,
@@ -140,27 +150,48 @@ export default function CRMPage() {
         timestamp: new Date().toISOString()
       }]
     };
-    setCustomers(prev => [newCustomer, ...prev]);
-    setIsModalOpen(false);
+
+    try {
+      await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
+      });
+      setCustomers(prev => [newCustomer, ...prev]);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+      alert('Erro ao salvar cliente no banco de dados.');
+    }
   };
 
-  const handleUpdateCustomer = (id: string, updates: Partial<Customer>) => {
-    setCustomers(prev => prev.map(c => {
-      if (c.id === id) {
-        const newStatus = updates.status && updates.status !== c.status;
-        const updatedHistory = newStatus 
-          ? [...c.statusHistory, { status: updates.status!, timestamp: new Date().toISOString() }]
-          : c.statusHistory;
-        
-        return { 
-          ...c, 
-          ...updates, 
-          updatedAt: new Date().toISOString(),
-          statusHistory: updatedHistory
-        };
-      }
-      return c;
-    }));
+  const handleUpdateCustomer = async (id: string, updates: Partial<Customer>) => {
+    const customer = customers.find(c => c.id === id);
+    if (!customer) return;
+
+    const newStatus = updates.status && updates.status !== customer.status;
+    const updatedHistory = newStatus 
+      ? [...customer.statusHistory, { status: updates.status!, timestamp: new Date().toISOString() }]
+      : customer.statusHistory;
+    
+    const updatedCustomer = { 
+      ...customer, 
+      ...updates, 
+      updatedAt: new Date().toISOString(),
+      statusHistory: updatedHistory
+    };
+
+    try {
+      await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedCustomer)
+      });
+      setCustomers(prev => prev.map(c => c.id === id ? updatedCustomer : c));
+    } catch (error) {
+      console.error('Failed to update customer:', error);
+      alert('Erro ao atualizar cliente no banco de dados.');
+    }
   };
 
   const exportToCSV = () => {
@@ -190,22 +221,54 @@ export default function CRMPage() {
     document.body.removeChild(link);
   };
 
-  const handleAddBroker = (data: Omit<Broker, 'id' | 'createdAt'>) => {
+  const handleAddBroker = async (data: Omit<Broker, 'id' | 'createdAt'>) => {
     const newBroker: Broker = {
       ...data,
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString()
     };
-    setBrokers(prev => [...prev, newBroker]);
+
+    try {
+      await fetch('/api/brokers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newBroker)
+      });
+      setBrokers(prev => [...prev, newBroker]);
+    } catch (error) {
+      console.error('Failed to save broker:', error);
+      alert('Erro ao salvar corretor no banco de dados.');
+    }
   };
 
-  const handleUpdateBroker = (id: string, updates: Partial<Broker>) => {
-    setBrokers(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+  const handleUpdateBroker = async (id: string, updates: Partial<Broker>) => {
+    const broker = brokers.find(b => b.id === id);
+    if (!broker) return;
+
+    const updatedBroker = { ...broker, ...updates };
+
+    try {
+      await fetch('/api/brokers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedBroker)
+      });
+      setBrokers(prev => prev.map(b => b.id === id ? updatedBroker : b));
+    } catch (error) {
+      console.error('Failed to update broker:', error);
+      alert('Erro ao atualizar corretor no banco de dados.');
+    }
   };
 
-  const handleDeleteBroker = (id: string) => {
+  const handleDeleteBroker = async (id: string) => {
     if (confirm('Deseja realmente excluir este corretor?')) {
-      setBrokers(prev => prev.filter(b => b.id !== id));
+      try {
+        await fetch(`/api/brokers/${id}`, { method: 'DELETE' });
+        setBrokers(prev => prev.filter(b => b.id !== id));
+      } catch (error) {
+        console.error('Failed to delete broker:', error);
+        alert('Erro ao excluir corretor do banco de dados.');
+      }
     }
   };
 
@@ -243,31 +306,38 @@ export default function CRMPage() {
           </div>
 
           {!selectedUser ? (
-            <div className="space-y-3">
-              {USERS.map(user => (
-                <button
-                  key={user.id}
-                  onClick={() => {
-                    setSelectedUser(user);
-                    setLoginError(false);
-                    setPassword('');
-                  }}
-                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-gray-100">
-                      {user.name.charAt(0)}
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {isLoading ? (
+                <div className="py-8 text-center">
+                  <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Carregando...</p>
+                </div>
+              ) : (
+                allUsers.map(user => (
+                  <button
+                    key={user.id}
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setLoginError(false);
+                      setPassword('');
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-gray-100">
+                        {user.name.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-gray-900">{user.name}</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">
+                          {user.role === 'admin' ? 'Administrador' : user.role === 'analyst' ? 'Analista' : 'Corretor'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <p className="font-bold text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">
-                        {user.role === 'admin' ? 'Administrador' : user.role === 'analyst' ? 'Analista' : 'Corretor'}
-                      </p>
-                    </div>
-                  </div>
-                  <LogIn size={20} className="text-gray-300 group-hover:text-indigo-600 transition-colors" />
-                </button>
-              ))}
+                    <LogIn size={20} className="text-gray-300 group-hover:text-indigo-600 transition-colors" />
+                  </button>
+                ))
+              )}
             </div>
           ) : (
             <form onSubmit={handleLogin} className="space-y-4">

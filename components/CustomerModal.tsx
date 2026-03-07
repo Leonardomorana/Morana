@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Upload, File, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Upload, File, Trash2, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
 import { Customer, CreditStatus, Document, Broker } from '@/lib/types';
@@ -16,6 +16,7 @@ interface CustomerModalProps {
 }
 
 export function CustomerModal({ isOpen, onClose, onSave, customer, brokers = [], canChangeBroker = false }: CustomerModalProps) {
+  const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState<Partial<Customer>>(() => {
     if (customer) return customer;
     return {
@@ -40,19 +41,42 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, brokers = [],
     onSave(formData);
   };
 
-  const onDrop = (acceptedFiles: File[]) => {
-    const newDocs: Document[] = acceptedFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: "OUTROS", // Default, user can change
-      url: URL.createObjectURL(file),
-      uploadedAt: new Date().toISOString()
-    }));
-    
-    setFormData(prev => ({
-      ...prev,
-      documents: [...(prev.documents || []), ...newDocs]
-    }));
+  const onDrop = async (acceptedFiles: File[]) => {
+    setIsUploading(true);
+    try {
+      const newDocs: Document[] = [];
+      
+      for (const file of acceptedFiles) {
+        const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+          method: 'POST',
+          body: file,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Upload failed');
+        }
+
+        newDocs.push({
+          id: Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          type: "OUTROS",
+          url: data.url,
+          uploadedAt: new Date().toISOString()
+        });
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        documents: [...(prev.documents || []), ...newDocs]
+      }));
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      alert(`Erro no upload: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
@@ -265,13 +289,15 @@ export function CustomerModal({ isOpen, onClose, onSave, customer, brokers = [],
 
               <div 
                 {...getRootProps()} 
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-400 hover:bg-gray-50'}`}
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-400 hover:bg-gray-50'} ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <input {...getInputProps()} />
+                <input {...getInputProps()} disabled={isUploading} />
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 mb-4">
-                  <Upload size={24} />
+                  {isUploading ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
                 </div>
-                <p className="text-sm font-medium text-gray-900">Arraste documentos aqui ou clique para selecionar</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {isUploading ? 'Enviando documentos...' : 'Arraste documentos aqui ou clique para selecionar'}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">Formatos aceitos: PDF, JPG, PNG</p>
               </div>
 
