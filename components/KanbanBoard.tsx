@@ -61,6 +61,10 @@ export function KanbanBoard({ customers, onUpdateStatus, onEdit }: KanbanBoardPr
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(customer.propertyValue)}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-gray-400">Corretor:</span>
+                    <span className="font-medium text-gray-600">{customer.brokerName}</span>
+                  </div>
                   
                   {/* Document Progress */}
                   <div className="pt-1">

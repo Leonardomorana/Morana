@@ -84,6 +84,15 @@ export function DashboardStats({ customers }: DashboardStatsProps) {
     return Object.entries(projectVolume).map(([name, value]) => ({ name, value }));
   }, [customers]);
 
+  const brokerData = useMemo(() => {
+    const brokerVolume = customers.reduce((acc, curr) => {
+      acc[curr.brokerName] = (acc[curr.brokerName] || 0) + curr.financedValue;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(brokerVolume).map(([name, value]) => ({ name, value }));
+  }, [customers]);
+
   const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
 
   return (
@@ -206,6 +215,40 @@ export function DashboardStats({ customers }: DashboardStatsProps) {
           </div>
         </div>
       </div>
+
+      {/* Broker Volume Chart (Only if multiple brokers present) */}
+      {brokerData.length > 1 && (
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Users size={20} className="text-indigo-600" />
+              Volume por Corretor
+            </h3>
+          </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={brokerData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F3F4F6" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} width={120} />
+                <Tooltip 
+                  formatter={(value: any) => 
+                    typeof value === 'number' 
+                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
+                      : value
+                  }
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+                />
+                <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                  {brokerData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

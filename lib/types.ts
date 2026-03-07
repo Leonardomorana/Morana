@@ -12,6 +12,18 @@ export enum CreditStatus {
   ASSINATURA = "Assinatura"
 }
 
+export type UserRole = 'admin' | 'analyst' | 'broker';
+
+export interface Broker {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+}
+
 export interface Document {
   id: string;
   name: string;
@@ -33,6 +45,8 @@ export interface Customer {
   createdAt: string;
   updatedAt: string;
   analyst: string;
+  brokerId: string;
+  brokerName: string;
   documents: Document[];
   statusHistory: {
     status: CreditStatus;

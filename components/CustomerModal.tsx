@@ -4,26 +4,33 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, File, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useDropzone } from 'react-dropzone';
-import { Customer, CreditStatus, Document } from '@/lib/types';
+import { Customer, CreditStatus, Document, Broker } from '@/lib/types';
 
 interface CustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: Partial<Customer>) => void;
   customer?: Customer;
+  brokers?: Broker[];
+  canChangeBroker?: boolean;
 }
 
-export function CustomerModal({ isOpen, onClose, onSave, customer }: CustomerModalProps) {
-  const [formData, setFormData] = useState<Partial<Customer>>(customer || {
-    name: '',
-    cpf: '',
-    income: 0,
-    project: '',
-    unit: '',
-    propertyValue: 0,
-    financedValue: 0,
-    status: CreditStatus.NOVO_CADASTRO,
-    documents: []
+export function CustomerModal({ isOpen, onClose, onSave, customer, brokers = [], canChangeBroker = false }: CustomerModalProps) {
+  const [formData, setFormData] = useState<Partial<Customer>>(() => {
+    if (customer) return customer;
+    return {
+      name: '',
+      cpf: '',
+      income: 0,
+      project: '',
+      unit: '',
+      propertyValue: 0,
+      financedValue: 0,
+      status: CreditStatus.NOVO_CADASTRO,
+      brokerId: '',
+      brokerName: '',
+      documents: []
+    };
   });
 
   const [activeTab, setActiveTab] = useState<'info' | 'docs'>('info');
@@ -188,6 +195,43 @@ export function CustomerModal({ isOpen, onClose, onSave, customer }: CustomerMod
                     />
                   </div>
                 </div>
+                {canChangeBroker ? (
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Corretor Responsável *</label>
+                    <select 
+                      required
+                      value={formData.brokerId}
+                      onChange={e => {
+                        const broker = brokers.find(b => b.id === e.target.value);
+                        setFormData({
+                          ...formData, 
+                          brokerId: e.target.value,
+                          brokerName: broker?.name || ''
+                        });
+                      }}
+                      className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    >
+                      <option value="">Selecione um corretor</option>
+                      {brokers.map(b => (
+                        <option key={b.id} value={b.id}>{b.name} ({b.company})</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : formData.brokerName && (
+                  <div className="col-span-2">
+                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                          {formData.brokerName.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Corretor Responsável</p>
+                          <p className="text-sm font-bold text-gray-900">{formData.brokerName}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           ) : (

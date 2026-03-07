@@ -30,6 +30,7 @@ export function CustomerTable({ customers, onEdit }: CustomerTableProps) {
           <tr className="bg-gray-50/50 border-b border-gray-100">
             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empreendimento</th>
+            <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Corretor</th>
             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Renda</th>
             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor Financiado</th>
             <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
@@ -76,6 +77,10 @@ export function CustomerTable({ customers, onEdit }: CustomerTableProps) {
                     {customer.documents.filter(d => ['RG', 'CPF', 'COMPROVANTE_RENDA', 'IRPF', 'EXTRATO_FGTS'].includes(d.type)).length}/5
                   </span>
                 </div>
+              </td>
+              <td className="px-6 py-4">
+                <p className="text-sm text-gray-700 font-medium">{customer.brokerName}</p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Parceiro</p>
               </td>
               <td className="px-6 py-4">
                 <p className="text-sm font-medium text-gray-900">
