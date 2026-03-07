@@ -20,6 +20,7 @@ export interface Broker {
   email: string;
   phone: string;
   company: string;
+  password?: string;
   status: 'active' | 'inactive';
   createdAt: string;
 }

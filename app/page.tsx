@@ -44,17 +44,21 @@ interface User {
   id: string;
   name: string;
   role: UserRole;
+  password?: string;
 }
 
 const USERS: User[] = [
-  { id: '1', name: 'Leonardo Morana', role: 'admin' },
-  { id: '2', name: 'Corretor João', role: 'broker' },
-  { id: '3', name: 'Corretora Maria', role: 'broker' },
-  { id: '4', name: 'Analista Júnior', role: 'analyst' }
+  { id: '1', name: 'Leonardo Morana', role: 'admin', password: '123' },
+  { id: '2', name: 'Corretor João', role: 'broker', password: '123' },
+  { id: '3', name: 'Corretora Maria', role: 'broker', password: '123' },
+  { id: '4', name: 'Analista Júnior', role: 'analyst', password: '123' }
 ];
 
 export default function CRMPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState(false);
   const [view, setView] = useState<'dashboard' | 'table' | 'kanban' | 'brokers'>('dashboard');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [brokers, setBrokers] = useState<Broker[]>([]);
@@ -207,7 +211,17 @@ export default function CRMPage() {
 
   const handleResetPassword = (id: string) => {
     const broker = brokers.find(b => b.id === id);
-    alert(`Senha do corretor ${broker?.name} redefinida para: CrediFlow123`);
+    alert(`Senha do corretor ${broker?.name} redefinida para: 123`);
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUser && password === (selectedUser.password || '123')) {
+      setCurrentUser(selectedUser);
+      setLoginError(false);
+    } else {
+      setLoginError(true);
+    }
   };
 
   if (!currentUser) {
@@ -223,31 +237,74 @@ export default function CRMPage() {
               <ShieldCheck size={32} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">CrediFlow CRM</h1>
-            <p className="text-gray-500 mt-2">Selecione um perfil para acessar</p>
+            <p className="text-gray-500 mt-2">
+              {selectedUser ? `Bem-vindo, ${selectedUser.name}` : 'Selecione um perfil para acessar'}
+            </p>
           </div>
 
-          <div className="space-y-3">
-            {USERS.map(user => (
-              <button
-                key={user.id}
-                onClick={() => setCurrentUser(user)}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl transition-all group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-gray-100">
-                    {user.name.charAt(0)}
+          {!selectedUser ? (
+            <div className="space-y-3">
+              {USERS.map(user => (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    setSelectedUser(user);
+                    setLoginError(false);
+                    setPassword('');
+                  }}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-indigo-50 border border-gray-100 hover:border-indigo-200 rounded-2xl transition-all group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold border border-gray-100">
+                      {user.name.charAt(0)}
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">
+                        {user.role === 'admin' ? 'Administrador' : user.role === 'analyst' ? 'Analista' : 'Corretor'}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <p className="font-bold text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">
-                      {user.role === 'admin' ? 'Administrador' : user.role === 'analyst' ? 'Analista' : 'Corretor'}
-                    </p>
-                  </div>
-                </div>
-                <LogIn size={20} className="text-gray-300 group-hover:text-indigo-600 transition-colors" />
-              </button>
-            ))}
-          </div>
+                  <LogIn size={20} className="text-gray-300 group-hover:text-indigo-600 transition-colors" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">Senha de Acesso</label>
+                <input 
+                  autoFocus
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Digite sua senha"
+                  className={`w-full px-4 py-3 bg-gray-50 border ${loginError ? 'border-red-500 ring-2 ring-red-500/10' : 'border-gray-200'} rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all`}
+                />
+                {loginError && <p className="text-red-500 text-[10px] font-bold mt-1 ml-1 uppercase tracking-wider">Senha incorreta. Tente novamente.</p>}
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSelectedUser(null);
+                    setPassword('');
+                    setLoginError(false);
+                  }}
+                  className="flex-1 px-4 py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-2xl transition-all"
+                >
+                  Voltar
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-[2] px-4 py-3 bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 rounded-2xl transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                >
+                  Entrar <LogIn size={18} />
+                </button>
+              </div>
+              <p className="text-center text-[10px] text-gray-400 mt-4">Dica: A senha padrão para todos é <span className="font-bold">123</span></p>
+            </form>
+          )}
         </motion.div>
       </div>
     );
@@ -316,7 +373,11 @@ export default function CRMPage() {
             </div>
           </div>
           <button 
-            onClick={() => setCurrentUser(null)}
+            onClick={() => {
+              setCurrentUser(null);
+              setSelectedUser(null);
+              setPassword('');
+            }}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg text-xs font-bold transition-all"
           >
             <LogOut size={14} />

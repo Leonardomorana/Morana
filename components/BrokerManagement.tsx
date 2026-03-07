@@ -34,6 +34,7 @@ export function BrokerManagement({ brokers, onAdd, onUpdate, onDelete, onResetPa
     email: '',
     phone: '',
     company: '',
+    password: '',
     status: 'active' as 'active' | 'inactive'
   });
 
@@ -52,7 +53,7 @@ export function BrokerManagement({ brokers, onAdd, onUpdate, onDelete, onResetPa
       onAdd(formData);
     }
     setIsAdding(false);
-    setFormData({ name: '', email: '', phone: '', company: '', status: 'active' });
+    setFormData({ name: '', email: '', phone: '', company: '', password: '', status: 'active' });
   };
 
   const startEdit = (broker: Broker) => {
@@ -62,6 +63,7 @@ export function BrokerManagement({ brokers, onAdd, onUpdate, onDelete, onResetPa
       email: broker.email,
       phone: broker.phone,
       company: broker.company,
+      password: broker.password || '',
       status: broker.status
     });
     setIsAdding(true);
@@ -245,6 +247,17 @@ export function BrokerManagement({ brokers, onAdd, onUpdate, onDelete, onResetPa
                   type="text"
                   value={formData.company}
                   onChange={e => setFormData({...formData, company: e.target.value})}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">Senha de Acesso</label>
+                <input 
+                  required
+                  type="password"
+                  placeholder="Defina uma senha"
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
                   className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                 />
               </div>
