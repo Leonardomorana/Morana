@@ -86,7 +86,7 @@ export function BrokerManagement({ brokers, onAdd, onUpdate, onDelete, onResetPa
         <button 
           onClick={() => {
             setEditingBroker(null);
-            setFormData({ name: '', email: '', phone: '', company: '', status: 'active' });
+            setFormData({ name: '', email: '', phone: '', company: '', password: '', status: 'active' });
             setIsAdding(true);
           }}
           className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-sm font-bold transition-all shadow-md shadow-indigo-100"
