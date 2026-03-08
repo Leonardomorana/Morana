@@ -23,7 +23,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json(blob);
   } catch (error: any) {
     console.error('Upload error:', error);
-    const errorMessage = error.message || 'Failed to upload file';
+    let errorMessage = error.message || 'Failed to upload file';
+    
+    if (errorMessage.includes('private store')) {
+      errorMessage = 'Erro de Configuração: Seu Vercel Blob está configurado como "Private". No painel da Vercel, altere as configurações do Blob para "Public" ou entre em contato com o suporte.';
+    }
+    
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

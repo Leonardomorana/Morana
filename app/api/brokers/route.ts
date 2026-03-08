@@ -2,6 +2,9 @@ import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
+  if (!process.env.POSTGRES_URL) {
+    return NextResponse.json({ error: 'POSTGRES_URL missing' }, { status: 500 });
+  }
   try {
     const { rows } = await sql`SELECT * FROM brokers ORDER BY created_at DESC`;
     return NextResponse.json(rows);
@@ -11,6 +14,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!process.env.POSTGRES_URL) {
+    return NextResponse.json({ error: 'POSTGRES_URL missing' }, { status: 500 });
+  }
   try {
     const body = await request.json();
     const { id, name, email, phone, company, password, status } = body;

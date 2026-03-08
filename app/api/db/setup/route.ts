@@ -2,6 +2,12 @@ import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
+  if (!process.env.POSTGRES_URL) {
+    return NextResponse.json({ 
+      error: 'Configuração ausente: POSTGRES_URL não encontrada. Certifique-se de que o banco de dados Postgres está vinculado ao projeto no painel da Vercel.' 
+    }, { status: 500 });
+  }
+
   try {
     // Create brokers table
     await sql`
